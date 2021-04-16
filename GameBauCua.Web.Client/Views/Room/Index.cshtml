@@ -1,0 +1,310 @@
+﻿@model GameBauCua.Web.Client.Data.Entities.RoomDetail
+
+@{
+    ViewData["Title"] = "Room";
+}
+
+<input type="hidden" id="currentRoundPlayIdInput" value="0" />
+<input type="hidden" id="currentYourMascotBetInput" value="-1" />
+
+<h2>Room</h2>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <h5 class="card-header" id="currentRoundNumberTitle">
+                Bầu Cua Tôm Cá
+            </h5>
+            <div class="card-body">
+                @if (Model.IsHost)
+                {
+                    <input type="hidden" id="nextRoundNumberInput" value="1" />
+                    <button type="button" id="lacCuocButton" class="btn btn-lg btn-block btn-danger mb-4">LẮC CƯỢC</button>
+                }
+
+                <h5 class="card-title" id="currentRoundPlayTitle"></h5>
+
+                <div class="row mb-3">
+                    <div class="col">
+                        <button type="button" id="linhVatNai" class="btn btn-lg btn-block btn-secondary" 
+                                onclick="chooseMascot(0, 'Nai')">NAI</button>
+                    </div>
+                    <div class="col">
+                        <button type="button" id="linhVatBau" class="btn btn-lg btn-block btn-secondary"
+                                onclick="chooseMascot(1, 'Bầu')">BẦU</button>
+                    </div>
+                    <div class="col">
+                        <button type="button" id="linhVatGa" class="btn btn-lg btn-block btn-secondary"
+                                onclick="chooseMascot(2, 'Gà')">GÀ</button>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <button type="button" id="linhVatCa" data-mascot-id="3" data-mascot-name="Cá" class="btn btn-lg btn-block btn-secondary"
+                                onclick="chooseMascot(3, 'Cá')">CÁ</button>
+                    </div>
+                    <div class="col">
+                        <button type="button" id="linhVatCua" class="btn btn-lg btn-block btn-secondary"
+                                onclick="chooseMascot(4, 'Cua')">CUA</button>
+                    </div>
+                    <div class="col">
+                        <button type="button" id="linhVatTom" class="btn btn-lg btn-block btn-secondary"
+                                onclick="chooseMascot(5, 'Tôm')">TÔM</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg">
+                <div class="card">
+                    <h5 class="card-header">Thông tin đặt cược</h5>
+                    <div class="card-body">
+                        @if (!Model.IsHost)
+                        {
+                            <h5>Bạn đã chọn: <b class="text-danger" id="yourMascotNameBet">...</b></h5>
+                            <form>
+                                <div class="form-row">
+                                    <div class="col">
+                                        <input type="text" class="form-control" id="datCuocInput" placeholder="Nhập số tiền cược" />
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" id="datCuocButton" class="btn btn-primary ml-2">Đặt</button>
+                                    </div>
+                                </div>
+                            </form>
+                        }
+                        else
+                        {
+                            <form>
+                                <div class="form-group">
+                                    <input type="text" class="form-control" id="minimumBetInput" placeholder="Nhập mức cược tối thiểu" />
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" class="form-control" id="maximumBetInput" placeholder="Nhập mức cược tối đa" />
+                                </div>
+                                <button type="button" id="taoVongChoiButton" class="btn btn-block btn-primary">Tạo vòng chơi</button>"
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg">
+                <div class="card mb-3">
+                    <h5 class="card-header">Thông tin cược người chơi khác</h5>
+                    <div class="card-body">
+                        <ul id="playerBetList"></ul>
+                    </div>
+                </div>
+                <div class="card">
+                    <h5 class="card-header">Lịch sử kết quả</h5>
+                    <div class="card-body">
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <h5 class="card-header">Thông tin phòng</h5>
+            <div class="card-body">
+                <ul>
+                    <li>
+                        Mã phòng:
+                        <b>@Model.Room.Id</b>
+                    </li>
+                    <li>
+                        Tên phòng:
+                        <b>@Model.Room.Name</b>
+                    </li>
+                    <li>
+                        Số lượng người chơi:
+                        <b>@Model.Room.NumberOfPlayers</b>
+                    </li>
+                    <li>
+                        Mức cược tối thiểu:
+                        <b>@string.Format("{0:n0}", Model.Room.MinimumBet) VNĐ</b>
+                    </li>
+                    <li>
+                        Mức cược tối đa dự kiến:
+                        <b>@string.Format("{0:n0}", Model.Room.ExpectedMaximumBet) VNĐ</b>
+                    </li>
+                </ul>
+
+                <button id="exitRoomButton" class="btn btn-outline-danger mb-3">Thoát</button>
+            </div>
+        </div>
+        <div class="card">
+            <h5 class="card-header">Danh sách người chơi</h5>
+            <ul class="list-group list-group-flush" id="playersInRoomList">
+            </ul>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/signalr/dist/browser/signalr.js"></script>
+    <script>
+        "use strict";
+
+        var connection = new signalR.HubConnectionBuilder().withUrl("/gameHub").build();
+
+        connection.start().then(function () {
+            connection.invoke("GetPlayersByRoomId", "@Model.Room.Id").catch(function (err) {
+                return console.error(err.toString());
+            });
+        }).catch(function (err) {
+            return console.error(err.toString());
+        });
+
+        //connection.disconnected().then(function () {
+        //    alert("User vừa thoát");
+        //}).catch(function (err) {
+        //    return console.error(err.toString());
+        //});;
+
+        connection.on("DisconnectedFromPlayer", function () {
+            alert("User vừa thoát");
+        });
+
+        connection.on("LoadedPlayersInRoom", function (roomDetails) {
+            $('#playersInRoomList').html("");
+
+            for (var i = 0; i < roomDetails.length; i++) {
+                $('#playersInRoomList').prepend(`
+                    <li class="list-group-item">
+                        <span class="${roomDetails[i].isHost ? "font-weight-bold text-danger" : ""}">${roomDetails[i].fullName}</span>
+                        <a href="#" class="${roomDetails[i].isHost || roomDetails[i].id === "@Model.PlayerId" ? "d-none" : ""}">
+                            <i class="fas fa-times"></i>
+                        </a>
+                        <ul>
+                            <li>
+                                Tài sản:
+                                <b class="text-primary">${addCommas(roomDetails[i].yourCapital)} VNĐ</b>
+                            </li>
+                        </ul>
+                    </li>
+                `);
+            }
+        });
+
+        connection.on("ExitedRoomFromHost", function () {
+            alert("Chủ phòng hủy phòng. Vui lòng bạn chọn phòng khác!");
+            window.location = "/";
+        });
+
+        connection.on("ExitedRoomFromPlayer", function (playerFullName) {
+            window.location = "/";
+
+            connection.invoke("GetPlayersByRoomId", "@Model.Room.Id").catch(function (err) {
+                return console.error(err.toString());
+            });
+        });
+
+        connection.on("UnreadyAllPlayer", function () {
+            alert("Tất cả người chơi chưa sẵn sàng!");
+        });
+
+        connection.on("StartedNewRound", function (currentRoundPlay) {
+            alert("Vòng " + currentRoundPlay.roundNumber + " đã bắt đầu. Hãy đặt cược!");
+
+            $("#currentRoundPlayIdInput").val(currentRoundPlay.id);
+            $("#nextRoundNumberInput").val(currentRoundPlay.roundNumber + 1);
+            $("#currentRoundNumberTitle").text("Vòng " + currentRoundPlay.roundNumber);
+            $("#currentRoundPlayTitle").html(`
+                Cược Tối thiểu:
+                <b class="text-info">${currentRoundPlay.minimumBet}</b>
+                -
+                Cược tối đa:
+                <b class="text-danger">${currentRoundPlay.maximumBet}</b>
+            `);
+        });
+
+        connection.on("GetPlayerBetList", function (playerBetList) {
+            $("#playerBetList").html("");
+
+            for (var i = 0; i < playerBetList.length; i++) {
+                $("#playerBetList").append(`
+                    <li>
+                        <b>${playerBetList[i].playerFullName}</b>
+                        -
+                        <b class="text-success">${getMascotName(playerBetList[i].mascotBet)}</b>
+                        -
+                        <b class="text-danger">${addCommas(playerBetList[i].yourBet)}</b>
+                    </li>
+                `);
+            }
+        });
+
+        // event listeners
+        document.getElementById("exitRoomButton").addEventListener("click", function (event) {
+            connection.invoke("ExitRoom", "@Model.Room.Id").catch(function (err) {
+                return console.error(err.toString());
+            });
+        });
+
+        if (document.getElementById("taoVongChoiButton") !== null)
+            document.getElementById("taoVongChoiButton").addEventListener("click", function (event) {
+                var roomDetail = {
+                    maximumBet: document.getElementById("maximumBetInput").value,
+                    minimumBet: document.getElementById("minimumBetInput").value,
+                    roundNumber: document.getElementById("nextRoundNumberInput").value,
+                    roomId: "@Model.Room.Id"
+                };
+
+                connection.invoke("CreateNewRound", JSON.stringify(roomDetail)).catch(function (err) {
+                    return console.error(err.toString());
+                });
+            });
+
+        if (document.getElementById("datCuocButton") !== null)
+            document.getElementById("datCuocButton").addEventListener("click", function (event) {
+                var roundPlayDetail = {
+                    roundPlayId: document.getElementById("currentRoundPlayIdInput").value,
+                    mascotBet: document.getElementById("currentYourMascotBetInput").value,
+                    yourBet: document.getElementById("datCuocInput").value
+                };
+
+                connection.invoke("BetByPlayer", JSON.stringify(roundPlayDetail)).catch(function (err) {
+                    return console.error(err.toString());
+                });
+            });
+
+        // functions
+        function chooseMascot(mascotId, mascotName) {
+            $("#currentYourMascotBetInput").val(mascotId);
+            $("#yourMascotNameBet").text(mascotName);
+        }
+
+        function addCommas(nStr) {
+            nStr += '';
+            var x = nStr.split('.');
+            var x1 = x[0];
+            var x2 = x.length > 1 ? '.' + x[1] : '';
+            var rgx = /(\d+)(\d{3})/;
+            while (rgx.test(x1)) {
+                x1 = x1.replace(rgx, '$1' + ',' + '$2');
+            }
+            return x1 + x2;
+        }
+
+        function getMascotName(mascotId) {
+            switch (mascotId) {
+                case 0:
+                    return "Nai";
+                case 1:
+                    return "Bầu";
+                case 2:
+                    return "Gà";
+                case 3:
+                    return "Cá";
+                case 4:
+                    return "Cua";
+                case 5:
+                    return "Tôm";
+                default:
+                    return "Không xác định";
+            }
+        }
+    </script>
+}

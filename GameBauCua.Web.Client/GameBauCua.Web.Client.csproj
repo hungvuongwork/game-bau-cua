@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <UserSecretsId>aspnet-GameBauCua.Web.Client-EBB78FDB-1380-4A2A-B879-04D725F872E5</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Data\Migrations\20210406104326_InitialTables.cs" />
+    <Compile Remove="Data\Migrations\20210406104326_InitialTables.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210406113018_ModifyRoomIdAndAddIsReadyColumn.cs" />
+    <Compile Remove="Data\Migrations\20210406113018_ModifyRoomIdAndAddIsReadyColumn.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210414042045_AddIsWaitingPlayerReadyColumn.cs" />
+    <Compile Remove="Data\Migrations\20210414042045_AddIsWaitingPlayerReadyColumn.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210414062150_ModifyRoundPlayDetailTable.cs" />
+    <Compile Remove="Data\Migrations\20210414062150_ModifyRoundPlayDetailTable.Designer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\lib\fontawesome\webfonts\fa-brands-400.svg" />
+    <None Include="wwwroot\lib\fontawesome\webfonts\fa-brands-400.woff2" />
+    <None Include="wwwroot\lib\fontawesome\webfonts\fa-regular-400.svg" />
+    <None Include="wwwroot\lib\fontawesome\webfonts\fa-regular-400.woff2" />
+    <None Include="wwwroot\lib\fontawesome\webfonts\fa-solid-900.svg" />
+    <None Include="wwwroot\lib\fontawesome\webfonts\fa-solid-900.woff2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="3.1.12" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="3.1.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="3.1.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="3.1.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="3.1.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.1.13">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.1.5" />
+  </ItemGroup>
+
+</Project>

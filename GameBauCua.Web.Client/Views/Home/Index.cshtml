@@ -1,0 +1,210 @@
+﻿@model GameBauCua.Web.Client.ViewModels.RoomRequestModel
+
+@{
+    ViewData["Title"] = "Trang chủ";
+}
+
+<div class="text-center">
+    <h1 class="display-4">
+        Welcome,
+        <b>@(string.IsNullOrEmpty(User.Identity.Name) ? "Khách" : User.Identity.Name)</b>
+    </h1>
+    @if (User.Identity.IsAuthenticated)
+    {
+        <button type="button" id="createRoomButton" class="btn btn-lg btn-primary mb-3" data-toggle="modal" data-target="#createRoomModal">TẠO PHÒNG CHƠI</button>
+        <br />
+        <button type="button" id="findRoomButton" class="btn btn-lg btn-outline-info" data-toggle="modal" data-target="#roomListModal">TÌM PHÒNG CHƠI</button>
+    }
+    else
+    {
+        <a class="btn btn-lg btn-outline-danger mt-3" asp-area="Identity" asp-page="/Account/Register">Đăng ký tại đây!</a>
+    }
+</div>
+
+<!-- Modal Create Room -->
+<div class="modal fade" id="createRoomModal" tabindex="-1" role="dialog" aria-labelledby="createRoomModal" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createRoomModal">Tạo phòng</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form asp-action="CreateRoom" asp-controller="Home" method="post">
+                    <div class="form-group">
+                        @Html.LabelFor(m => m.Name)
+                        <input type="text" id="RoomName" class="form-control" placeholder="Nhập tên phòng" />
+                    </div>
+                    <div class="form-group">
+                        @Html.LabelFor(m => m.NumberOfPlayers)
+                        <input type="text" id="RoomNumberOfPlayers" class="form-control" placeholder="Nhập số lượng người chơi" />
+                    </div>
+                    <div class="form-group">
+                        @Html.LabelFor(m => m.MinimumBet)
+                        <input type="text" id="RoomMinimumBet" class="form-control" placeholder="Nhập mức cược tối thiểu" />
+                    </div>
+                    <div class="form-group">
+                        @Html.LabelFor(m => m.ExpectedMaximumBet)
+                        <input type="text" id="RoomExpectedMaximumBet" class="form-control" placeholder="Nhập mức cược tối đa dự kiến" />
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+                <button type="button" id="createRoomSubmitButton" class="btn btn-primary">Tạo mới</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Room List -->
+<div class="modal fade" id="roomListModal" tabindex="-1" role="dialog" aria-labelledby="roomListModal" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createRoomModal">Tạo phòng</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <table class="table" id="roomListTable">
+                    <thead>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Tên phòng</th>
+                            <th scope="col">Chủ phòng</th>
+                            <th scope="col">Mức cược tối thiểu</th>
+                            <th scope="col">Mức cược tối đa dự kiến</th>
+                            <th scope="col">Số lượng</th>
+                            <th>...</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+                <button type="button" id="refreshRoomButton" class="btn btn-primary">Làm mới</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-delay="3000"
+     style="position: absolute; z-index: 1100; right: 16px; top: 16px;">
+    <div class="toast-header bg-danger text-white">
+        <strong class="mr-auto">Lỗi xảy ra!</strong>
+        <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div class="toast-body bg-white">
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/signalr/dist/browser/signalr.js"></script>
+    <script>
+        "use strict";
+
+        // event listeners
+        document.getElementById("createRoomSubmitButton").addEventListener("click", function (event) {
+            var reqModel = {
+                "name": document.getElementById("RoomName").value,
+                "numberOfPlayers": parseInt(document.getElementById("RoomNumberOfPlayers").value),
+                "minimumBet": parseInt(document.getElementById("RoomMinimumBet").value),
+                "expectedMaximumBet": parseInt(document.getElementById("RoomExpectedMaximumBet").value)
+            };
+
+            $.ajax({
+                url: "/api/Rooms",
+                type: "POST",
+                data: JSON.stringify(reqModel),
+                contentType: "application/json",
+                success: function (data) {
+                    if (data)
+                        window.location = "/Room?roomId=" + data.roomId;
+                },
+                error: function (err) {
+                    if (err.responseJSON.message)
+                        $(".toast .toast-body").text(err.responseJSON.message);
+                    else
+                        $(".toast .toast-body").text("Có lỗi xảy ra! Vui lòng kiểm tra lại!");
+
+                    $(".toast").toast("show");
+                }
+            });
+
+            event.preventDefault();
+        });
+
+        document.getElementById("refreshRoomButton").addEventListener("click", function (event) {
+            loadRoomList();
+        });
+
+        // methods
+        function joinRoom(roomId) {
+            $.ajax({
+                url: "/api/Rooms/join/" + roomId,
+                type: "POST",
+                contentType: "application/json",
+                success: function (data) {
+                    console.log(data);
+                    window.location = "/Room?roomId=" + data.roomId;
+                },
+                error: function (err) {
+                    console.log(err);
+                    if (err.responseJSON.message)
+                        $(".toast .toast-body").text(JSON.parse(err.responseText).message);
+                    else
+                        $(".toast .toast-body").text("Có lỗi xảy ra! Vui lòng kiểm tra lại!");
+
+                    $(".toast").toast("show");
+                }
+            })
+        }
+
+        function loadRoomList() {
+            $.get("/api/Rooms", function (data) {
+                $("#roomListTable tbody").html("");
+
+                if (data !== undefined && data.length > 0) {
+                    data.forEach(function (item) {
+                        $("#roomListTable tbody").append(`
+                            <tr>
+                                <td>#</td>
+                                <td>${item.name}</td>
+                                <td>${item.hostFullName}</td>
+                                <td>${item.minimumBet}</td>
+                                <td>${item.expectedMaximumBet}</td>
+                                <td>${item.numberOfPlayersInRoom}/${item.numberOfPlayers}</td>
+                                <td>
+                                    <button type="button" class="btn btn-success" onclick="joinRoom('${item.id}')">Tham gia</button>
+                                </td>
+                            </tr>
+                        `);
+                    });
+                }
+            }).fail(function (err) {
+                $("#roomListTable tbody").html("");
+
+                if (err.status === 404) {
+                    $("#roomListTable tbody").append(`
+                        <tr>
+                            <td class="text-center" colspan="7"><span class="text-muted">Không có phòng nào được tạo...</span></td>
+                        </tr>
+                    `);
+                }
+            });
+        }
+
+        // load room list
+        $('#roomListModal').on("show.bs.modal", function (event) {
+            loadRoomList();
+        });
+    </script>
+}
