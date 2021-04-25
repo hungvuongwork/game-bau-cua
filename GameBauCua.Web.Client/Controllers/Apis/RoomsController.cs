@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -36,7 +37,7 @@ namespace GameBauCua.Web.Client.Controllers.Apis
         {
             var viewModels = await (from r in _context.Rooms
                                     join rd in _context.RoomDetails on r.Id equals rd.RoomId
-                                    where rd.IsHost == true
+                                    where rd.IsHost == true && r.IsClosed == false
                                     select new RoomListViewModel
                                     {
                                         Id = r.Id,
@@ -46,7 +47,6 @@ namespace GameBauCua.Web.Client.Controllers.Apis
                                         NumberOfPlayersInRoom = r.RoomDetails.Where(w => w.RoomId == r.Id).Count(),
                                         MinimumBet = r.MinimumBet,
                                         ExpectedMaximumBet = r.ExpectedMaximumBet,
-                                        IsFull = r.IsFull
                                     }).ToListAsync();
 
             if (viewModels.Count() == 0)
@@ -63,6 +63,10 @@ namespace GameBauCua.Web.Client.Controllers.Apis
                 try
                 {
                     var host = await _userManager.FindByNameAsync(User.Identity.Name);
+
+                    if (host.YourCapital < 0)
+                        return BadRequest(new ResponseViewModel { Type = "warning", Message = "Bạn không đủ tiền để tạo phòng" });
+
                     var roomId = Guid.NewGuid().ToString();
 
                     _context.Rooms.Add(new Room
@@ -72,7 +76,6 @@ namespace GameBauCua.Web.Client.Controllers.Apis
                         NumberOfPlayers = requestModel.NumberOfPlayers,
                         MinimumBet = requestModel.MinimumBet,
                         ExpectedMaximumBet = requestModel.ExpectedMaximumBet,
-                        IsFull = false
                     });
 
                     _context.RoomDetails.Add(new RoomDetail
@@ -85,6 +88,7 @@ namespace GameBauCua.Web.Client.Controllers.Apis
                     var result = await _context.SaveChangesAsync();
                     if (result > 0)
                     {
+                        HttpContext.Response.Cookies.Append("RoomId", roomId);
                         await transaction.CommitAsync();
 
                         return CreatedAtAction("Index", "Room", new { roomId = roomId });
@@ -92,14 +96,14 @@ namespace GameBauCua.Web.Client.Controllers.Apis
 
                     await transaction.RollbackAsync();
 
-                    return BadRequest(new ResponseViewModel { Message = "Không tạo được phòng. Vui lòng thử lại sau!" });
+                    return BadRequest(new ResponseViewModel { Type = "warning", Message = "Không tạo được phòng. Vui lòng thử lại sau!" });
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex.Message);
                     await transaction.RollbackAsync();
 
-                    return BadRequest(new ResponseViewModel { Message = "Có lỗi xảy ra!" });
+                    return BadRequest(new ResponseViewModel { Type = "warning", Message = "Có lỗi xảy ra!" });
                 }
             }
         }
@@ -112,9 +116,13 @@ namespace GameBauCua.Web.Client.Controllers.Apis
                 try
                 {
                     var currentPlayer = await _userManager.FindByNameAsync(User.Identity.Name);
+
+                    if (currentPlayer.YourCapital < 0)
+                        return BadRequest(new ResponseViewModel { Type = "warning", Message = "Bạn không đủ tiền để tham gia phòng" });
+
                     var room = await _context.Rooms.FindAsync(roomId);
 
-                    if (room.IsFull)
+                    if (await CheckFullRoom(room.NumberOfPlayers, room.Id))
                         return BadRequest(new ResponseViewModel { Message = "Phòng đã đầy!" });
 
                     await _context.RoomDetails.AddAsync(new RoomDetail
@@ -126,17 +134,9 @@ namespace GameBauCua.Web.Client.Controllers.Apis
                     });
 
                     var joinedPlayerResult = await _context.SaveChangesAsync();
-
-                    var isRoomFull = await CheckFullRoom(room.NumberOfPlayers, roomId);
-                    if (isRoomFull)
+                    if (joinedPlayerResult > 0)
                     {
-                        room.IsFull = true;
-                        _context.Rooms.Update(room);
-                    }
-
-                    var result = await _context.SaveChangesAsync();
-                    if (joinedPlayerResult > 0 || result > 0)
-                    {
+                        HttpContext.Response.Cookies.Append("RoomId", roomId);
                         await transaction.CommitAsync();
 
                         return CreatedAtAction("Index", "Room", new { roomId = roomId });
@@ -144,16 +144,34 @@ namespace GameBauCua.Web.Client.Controllers.Apis
 
                     await transaction.RollbackAsync();
 
-                    return BadRequest(new ResponseViewModel { Message = "Không tham gia vào phòng. Vui lòng thử lại sau!" });
+                    return BadRequest(new ResponseViewModel { Type = "warning", Message = "Không tham gia vào phòng. Vui lòng thử lại sau!" });
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex.Message);
                     await transaction.RollbackAsync();
 
-                    return BadRequest(new ResponseViewModel { Message = "Có lỗi xảy ra!" });
+                    return BadRequest(new ResponseViewModel { Type = "warning", Message = "Có lỗi xảy ra!" });
                 }
             }
+        }
+
+        [HttpGet("get-player-list/{roomId}")]
+        public async Task<IActionResult> GetPlayerListById(string roomId)
+        {
+            var roomDetails = await (from rd in _context.RoomDetails
+                                     where rd.RoomId == roomId
+                                     select new PlayerListViewModel
+                                     {
+                                         Id = rd.Player.Id,
+                                         FullName = rd.Player.FullName,
+                                         UserName = rd.Player.UserName,
+                                         YourCapital = rd.Player.YourCapital,
+                                         IsHost = rd.IsHost,
+                                         Color = rd.Color
+                                     }).ToListAsync();
+
+            return Ok(roomDetails);
         }
 
         private async Task<bool> CheckFullRoom(int numberOfPlayers, string roomId)

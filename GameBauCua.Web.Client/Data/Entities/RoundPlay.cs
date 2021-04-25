@@ -25,7 +25,7 @@ namespace GameBauCua.Web.Client.Data.Entities
 
         public string WinMascots { get; set; }
 
-        public bool IsWaitingPlayerReady { get; set; }
+        public bool IsFinished { get; set; }
 
         [ForeignKey("Room")]
         public string RoomId { get; set; }

@@ -7,6 +7,7 @@ namespace GameBauCua.Web.Client.ViewModels
 {
     public class ResponseViewModel
     {
+        public string Type { get; set; }
         public string Message { get; set; }
     }
 }

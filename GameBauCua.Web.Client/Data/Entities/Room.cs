@@ -28,7 +28,7 @@ namespace GameBauCua.Web.Client.Data.Entities
         [Required]
         public long ExpectedMaximumBet { get; set; }
 
-        public bool IsFull { get; set; }
+        public bool IsClosed { get; set; }
 
         public ICollection<RoundPlay> RoundPlays { get; set; }
 
